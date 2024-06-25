@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import './App.css';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './LoginPage/Login';
 import AdminPage from './Admin/AdminPage';
 import Student from './Student/Student';
@@ -9,9 +9,12 @@ import StudentDetails from './StudentDetails/StudentDetails';
 import { db, onAuthStateChangedListener } from './firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { UserContext } from './Context/UserContext';
+import PrivateRoute from './PrivateRoute/PrivateRoute';
 function App() {
 	const [studentList, setStudentList] = useState();
 	const [profData, setProfData] = useState();
+	const { currentUser } = useContext(UserContext);
 	useEffect(() => {
 		async function fetchStudents() {
 			const studentsRef = collection(db, 'students'); // Reference to the "students" collection
@@ -46,10 +49,31 @@ function App() {
 	return (
 		<Routes>
 			<Route path='/' element={<Login />}></Route>
-			<Route path='/admin' element={<AdminPage />}></Route>
-			<Route path='/student' element={<Student />}></Route>
-			<Route path='/student-details' element={<StudentDetails />} />
-			<Route path='/lecturer-view' element={<Prof />}></Route>
+
+			<Route
+				path='/admin'
+				element={
+					currentUser?.email === 'admin@gmail.com' ? (
+						<AdminPage />
+					) : (
+						<span> Please Authenticate</span>
+					)
+				}
+			></Route>
+			<Route
+				path='/student'
+				element={currentUser ? <Student /> : <span>Please Authenticate</span>}
+			></Route>
+			<Route
+				path='/student-details'
+				element={
+					currentUser ? <StudentDetails /> : <span> Please Authenticate</span>
+				}
+			/>
+			<Route
+				path='/lecturer-view'
+				element={currentUser ? <Prof /> : <span>Please Authenticate</span>}
+			></Route>
 		</Routes>
 	);
 }
