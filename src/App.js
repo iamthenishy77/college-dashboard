@@ -50,16 +50,7 @@ function App() {
 		<Routes>
 			<Route path='/' element={<Login />}></Route>
 
-			<Route
-				path='/admin'
-				element={
-					currentUser?.email === 'admin@gmail.com' ? (
-						<AdminPage />
-					) : (
-						<span> Please Authenticate</span>
-					)
-				}
-			></Route>
+			<Route path='/admin' element={<AdminPage />}></Route>
 			<Route
 				path='/student'
 				element={currentUser ? <Student /> : <span>Please Authenticate</span>}

@@ -12,9 +12,22 @@ import {
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { createAuthUserWithEmailAndPassword, db, firestore } from '../firebase';
-import { collection, doc, addDoc, getDocs, setDoc } from 'firebase/firestore';
+import {
+	collection,
+	doc,
+	addDoc,
+	getDocs,
+	setDoc,
+	updateDoc,
+} from 'firebase/firestore';
 import AddSubjects from '../AddSubjects/AddSubjects';
-import { EditOutlined } from '@ant-design/icons';
+import {
+	DeleteColumnOutlined,
+	DeleteOutlined,
+	EditOutlined,
+} from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { signOutUser } from '../firebase';
 function AdminPage() {
 	const dateFormat = 'YYYY/MM/DD';
 	const [showModal, setShowModal] = useState(false);
@@ -25,6 +38,10 @@ function AdminPage() {
 	const [profModal, setProfModal] = useState();
 	const [loading, setLoading] = useState(false);
 	const [studentEditModal, setStudentEditModal] = useState(false);
+	const [editModal, setEditModal] = useState(false);
+
+	const [record, setRecord] = useState();
+
 	const tableColumns = [
 		{
 			title: 'Student Name',
@@ -56,22 +73,27 @@ function AdminPage() {
 			dataIndex: 'dateOfJoining',
 			key: 'dateOfJoining',
 		},
-		// {
-		// 	title: 'Actions',
-		// 	dataIndex: 'actions',
-		// 	key: 'dateOfJoining',
-		// 	render: (rec, ra) => {
-		// 		return (
-		// 			<div>
-		// 				<EditOutlined className='cursor-pointer' />
-		// 			</div>
-		// 		);
-		// 	},
-		// },
+		{
+			title: 'Actions',
+			dataIndex: 'actions',
+			key: 'dateOfJoining',
+			render: (rec, ra) => {
+				return (
+					<div className='flex flex-row gap-5'>
+						<EditOutlined
+							onClick={() => {
+								setRecord(ra);
+								setStudentEditModal(true);
+							}}
+						/>{' '}
+					</div>
+				);
+			},
+		},
 	];
 	const ProftableColumns = [
 		{
-			title: 'Student Name',
+			title: 'Lecturer Name',
 			dataIndex: 'lecturerName',
 			key: 'lecturerName',
 		},
@@ -96,12 +118,25 @@ function AdminPage() {
 			dataIndex: 'dateOfJoining',
 			key: 'dateOfJoining',
 		},
-		// {
-		// 	title: 'Actions',
-		// 	dataIndex: 'actions',
-		// 	key: 'dateOfJoining',
-		// },
+		{
+			title: 'Actions',
+			dataIndex: 'actions',
+			key: 'actions',
+			render: (rec, ra) => {
+				return (
+					<div className='flex flex-row gap-5'>
+						<EditOutlined
+							onClick={() => {
+								setRecord(ra);
+								setEditModal(true);
+							}}
+						/>{' '}
+					</div>
+				);
+			},
+		},
 	];
+	console.log(record);
 	const rowSelection = {
 		onChange: (selectedRowKeys, selectedRows) => {
 			console.log(
@@ -217,6 +252,50 @@ function AdminPage() {
 			console.log('No date selected');
 		}
 	};
+	const editSubmit = async (values) => {
+		setLoading(true);
+		console.log(values);
+		const updatedValues = { ...record, ...values };
+
+		const filteredValues = Object.fromEntries(
+			Object.entries(updatedValues).filter(([_, value]) => value !== undefined)
+		);
+
+		console.log('Filtered values for update:', filteredValues);
+		const professorRef = doc(db, 'prof', record?.id);
+		try {
+			await updateDoc(professorRef, filteredValues);
+		} catch (e) {
+			alert(e);
+		}
+
+		alert('Updated Successfully');
+
+		setEditModal(false);
+		setLoading(false);
+	};
+	const studentEditSubmit = async (values) => {
+		setLoading(true);
+		console.log(values);
+		const updatedValues = { ...record, ...values };
+
+		const filteredValues = Object.fromEntries(
+			Object.entries(updatedValues).filter(([_, value]) => value !== undefined)
+		);
+
+		console.log('Filtered values for update:', filteredValues);
+		const professorRef = doc(db, 'students', record?.id);
+		try {
+			await updateDoc(professorRef, filteredValues);
+		} catch (e) {
+			alert(e);
+		}
+
+		alert('Updated Successfully');
+
+		setStudentEditModal(false);
+		setLoading(false);
+	};
 	const modalValue = !showModal;
 	useEffect(() => {
 		async function fetchData() {
@@ -257,6 +336,11 @@ function AdminPage() {
 		<div className='p-5'>
 			<span className='flex flex-row items-center justify-center p-3 text-2xl font-bold text-black'>
 				Admin's Portal
+			</span>
+			<span className='flex flex-row justify-end items-center p-3'>
+				<Link to='/' className='font-bold text-black' onClick={signOutUser}>
+					Sign Out
+				</Link>
 			</span>
 
 			<Card
@@ -427,6 +511,173 @@ function AdminPage() {
 					<Form.Item label='Password' name='password'>
 						<Input placeholder='Enter Password' type='password'></Input>
 					</Form.Item>
+					<Form.Item
+						wrapperCol={{
+							offset: 8,
+							span: 16,
+						}}
+					>
+						<Button type='primary' htmlType='submit'>
+							Submit
+						</Button>
+					</Form.Item>
+				</Form>
+			</Modal>
+			<Modal
+				open={editModal}
+				onClose={() => {
+					setEditModal(false);
+					setRecord('');
+				}}
+				footer={null}
+				onCancel={() => setEditModal(false)}
+			>
+				<Form
+					labelCol={{ span: 6 }}
+					className='p-5 '
+					onFinish={editSubmit}
+					initialValues={{
+						lecturerName: record?.lecturerName,
+						dateOfBirth: record?.dateOfBirth,
+						address: record?.address,
+						department: record?.department,
+						branch: record?.branch,
+						dateOfJoining: record?.dateOfJoining,
+					}}
+				>
+					<Form.Item label={`Enter Name`} name='lecturerName'>
+						<Input placeholder='Enter Lecturer Name'></Input>
+					</Form.Item>
+
+					<Form.Item label={`Date of Birth`} name='dateOfBirth'>
+						<Input />
+					</Form.Item>
+					<Form.Item label={`Address`} name='address'>
+						<Input placeholder={`Enter Address`}></Input>
+					</Form.Item>
+					<Form.Item label=' Department' name='department'>
+						<Select
+							placeholder={`Select the Department`}
+							options={[
+								{
+									value: 'CSE',
+									label: 'CSE',
+								},
+								{
+									value: 'ECE',
+									label: 'ECE',
+								},
+								{
+									value: 'EEE',
+									label: 'EEE',
+								},
+							]}
+						></Select>
+					</Form.Item>
+					<Form.Item label='Branch' name='branch'>
+						<Select
+							placeholder={`Select the Department`}
+							options={[
+								{
+									value: 'B.tech',
+									label: 'B.tech',
+								},
+								{
+									value: 'MCA',
+									label: 'MCA',
+								},
+								{
+									value: 'BCA',
+									label: 'bca',
+								},
+							]}
+						></Select>
+					</Form.Item>
+					<Form.Item label='Date of join' name='dateOfJoining'>
+						<Input />
+					</Form.Item>
+
+					<Form.Item
+						wrapperCol={{
+							offset: 8,
+							span: 16,
+						}}
+					>
+						<Button type='primary' htmlType='submit'>
+							Submit
+						</Button>
+					</Form.Item>
+				</Form>
+			</Modal>
+			<Modal open={studentEditModal} footer={null}>
+				<Form
+					labelCol={{ span: 6 }}
+					className='p-5 '
+					onFinish={studentEditSubmit}
+					initialValues={{
+						studentName: record?.studentName,
+						fatherName: record?.fatherName,
+						dateOfBirth: record?.dateOfBirth,
+						address: record?.address,
+						department: record?.department,
+						branch: record?.branch,
+						dateOfJoin: record?.dateOfJoining,
+					}}
+				>
+					<Form.Item label={`Student's Name`} name='studentName'>
+						<Input placeholder='Enter Student Name'></Input>
+					</Form.Item>
+					<Form.Item label={`Father's Name`} name='fatherName'>
+						<Input placeholder={`Enter Father's Name`}></Input>
+					</Form.Item>
+					<Form.Item label={`Date of Birth`} name='dateOfBirth'>
+						<Input placeholder='Enter Date of Birth' />
+					</Form.Item>
+					<Form.Item label={`Address`} name='address'>
+						<Input placeholder={`Enter Address`}></Input>
+					</Form.Item>
+					<Form.Item label=' Department' name='department'>
+						<Select
+							placeholder={`Select the Department`}
+							options={[
+								{
+									value: 'ECE',
+									label: 'ECE',
+								},
+								{
+									value: 'CSE',
+									label: 'CSE',
+								},
+								{
+									value: 'None',
+									label: 'None',
+								},
+							]}
+						></Select>
+					</Form.Item>
+					<Form.Item label='Branch' name='branch'>
+						<Select
+							placeholder={`Select the Department`}
+							options={[
+								{
+									value: 'B.tech',
+									label: 'B.tech',
+								},
+								{
+									value: 'MCA',
+									label: 'MCA',
+								},
+								{
+									value: 'MBA',
+									label: 'MBA',
+								},
+							]}
+						></Select>
+					</Form.Item>
+					<Form.Item label='Date of join' name='dateOfJoin'>
+						<Input placeholder='Enter Date of Joining' />
+					</Form.Item>
+
 					<Form.Item
 						wrapperCol={{
 							offset: 8,
